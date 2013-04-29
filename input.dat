@@ -1,0 +1,13 @@
+&system
+   filePos     =  '/home/charles/Desktop/Research/Simulations/MD_water-Ions-64/PBE_novdw_330K/OH/Simulation_Files/h2o-64.pos'
+   fileCel     =  '/home/charles/Desktop/Research/Simulations/MD_water-Ions-64/PBE_novdw_330K/OH/Simulation_Files/h2o-64.cel'    
+   step        =  90000
+   ntsp        =  2
+   Ospecies    =  1
+   Hspecies    =  2
+   nsp(1)      =  64
+   nsp(2)      =  127
+   rcut        =  1.1655
+   Hbond_cut   =  3.4
+   Hbond_angle =  145.0
+/

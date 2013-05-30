@@ -33,7 +33,7 @@ Program Hbonds
                               mic=1,         &  !Scaled length of the box region, (for future use)
                               step,          &  !Desired step 
                               Oshell_count,  &  !Total Number of Oxygen mol inside the Hbond_cut radius
-                                                !Warning: This establishes a NEW index set for the 
+                                                !WARNING: This establishes a NEW index set for the 
                                                 !Oxygens inside Oshell
                               readstep,      &  !Current readstep in *pos and *cel file
                               ierror,        &  !error check
@@ -44,9 +44,10 @@ Program Hbonds
                               stau(:,:,:),   &  !scaled atomic positions (dim,index, atomic-species)
                               sOshell(:,:),  &  !Oxygens inside the Hbond_cut length (dim, Oshell-index) (assume index < 20)
                               sHshell(:,:,:)    !Hydrogens of Oxygens inside the HBond_cut length (dim, Oshell-index, H#)
-                                                !Warning: The indexes used above are for the Oshell index within the Oshell radius
+                                                !WARNING: The indexes used above are for the Oshell index within the Oshell radius
 
-   integer,allocatable     :: Href(:,:)         !Hydrogens associations with Oxygens (O-index, ref1-ref2-ref3 )
+   integer,allocatable     :: Href(:,:),     &  !Hydrogens associations with Oxygens (O-index, ref1-ref2-ref3 )   
+                              O_index(:)        !The Orginal indexes of those oxygens in the Hbond_cut length
    !
    character(len=256)       :: filePos, fileCel, dum
    !
@@ -60,6 +61,13 @@ Program Hbonds
    !Open Files
    open(unit=1,   file=(trim(filePos)), status='old')
    open(unit=2,   file=(trim(fileCel)), status='old')
+   open(unit=11, file='nearest-O.dat', status='unknown')
+   open(unit=12, file='Href.dat', status='unknown')
+   !
+   write(11,'("#Step:   ", I5)') step
+   write(11,'("#Oxygen: ", I5)') Ostar
+   write(12,'("#Step:   ", I5)') step
+   write(11,'("#---------------------------------------------------------------------------------------")')
    !
    !******************************************************************
    Main_loop: do 
@@ -99,6 +107,9 @@ Program Hbonds
       write(*,'(1X, "Program start... ")') 
       write(*,*) ''
       !
+      write(11,'("#Current molecule position: ", 3(F14.8))') (tau(k,Ostar,Ospecies),k=1,3)
+      write(11,'("#---------------------------------------------------------------------------------------")')
+      !
       !calculate the inverse
       call invert(aprim, apinv, omega)
       !
@@ -131,6 +142,8 @@ Program Hbonds
    !
    close(1)
    close(2)
+   close(11)
+   close(12)
    !
    !
    Contains
@@ -165,6 +178,7 @@ Program Hbonds
          sOshell(:,:) = 0.0_DP
          sHshell(:,:,:) = 0.0_DP
          !
+         !
          !Loop over all Oxygen atoms (cycle when Ostar) find
          !All atoms within Hbond length
          Oloop: do na=1,nsp(Ospecies),1
@@ -179,6 +193,10 @@ Program Hbonds
                ! 
                !Current, running, number of of atoms in first Oshell 
                Oshell_count = Oshell_count + 1
+               !
+               !Create O_index (a array to keep track of the previous indexes of
+               !those Oxygens inside the Hbond_cut length
+               O_index(Oshell_count) = na
                !
                !Create sOshell
                sOshell(:,Oshell_count) = stau(1:3,na,1)
@@ -230,6 +248,7 @@ Program Hbonds
                if (cos_angle <= ref_cos) then
                   !
                   num_donate = num_donate + 1
+                  write(11,'( 2X, I5, 3X, 3(F20.15), "  D")') O_index(j), (tau(k,O_index(j),Ospecies), k=1,3)
                   !
                endif  
                !
@@ -261,6 +280,7 @@ Program Hbonds
                if (cos_angle <= ref_cos) then
                   !
                   num_accept = num_accept + 1
+                  write(11,'( 2X, I5, 3X, 3(F20.15), "  A")') O_index(i), (tau(k,O_index(i),Ospecies), k=1,3)
                   !
                endif  
                !
@@ -347,7 +367,7 @@ Program Hbonds
             !1-H (Error): Check for a Single O Atom (Error!!)
             if ( (H1 == 0) .and. (H2 == 0) .and. (H3 == 0) .and. (H4 == 0) ) then
                !
-               write(*,*) ' ERROR: NO Hydrogens within Rcut:'
+               write(*,'(2X, "NO Hydrogens within Rcut, Oxygen Number",I5)' ) i
                !
             !OH: Check for a Single OH molecule (Double PT)
             elseif ( (H1 /= 0) .and. (H2 == 0) .and. (H3 == 0) .and. (H4 == 0) ) then
@@ -435,6 +455,7 @@ Program Hbonds
          allocate( stau(3,(mic**3*nat),ntsp)      )
          allocate( Href(nsp(Ospecies),numHref)    )  
          allocate( sOshell(3, shell_max)          )
+         allocate( O_index(shell_max)             )
          allocate( sHshell(3, shell_max,numHref)  )
          !
          Href(:,:) = 0
